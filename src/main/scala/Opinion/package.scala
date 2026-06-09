@@ -57,7 +57,8 @@ package object Opinion {
 
   def showWeightedGraph(swg:SpecificWeightedGraph):
   IndexedSeq[IndexedSeq[Double]] ={
-  ???
+    val (wg, n) = swg
+    Vector.tabulate(n)(i => Vector.tabulate(n)(j => wg(i, j)))
   }
 
   def simulate(fu:FunctionUpdate,
