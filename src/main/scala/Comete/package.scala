@@ -27,7 +27,19 @@ package object Comete {
   def rhoCMTGen(alpha:Double, beta:Double):PolMeasure={
     // Dados alpha y beta devuelve la funcion que calcula la medida
     // comete parametrizada en alpha y beta
-    ???
+    (distribution: Distribution) => {
+      val (pi, y) = distribution
+      
+      val rhoAux = (p: Double) => {
+        pi.zip(y).map { case (pi_i, y_i) =>
+          math.pow(pi_i, alpha) * math.pow(math.abs(y_i - p), beta)
+        }.sum
+      }
+      val pMin = min_p(rhoAux, 0.0, 1.0, 0.001)
+
+      rhoAux(pMin)
+      
+    }
   }
 
   def normalizar(m:PolMeasure):PolMeasure= {
