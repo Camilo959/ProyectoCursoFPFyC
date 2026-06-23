@@ -52,7 +52,23 @@ package object Opinion {
 
   def confBiasUpdate(sb:SpecificBelief ,
                      swg:SpecificWeightedGraph):SpecificBelief ={
-  ???
+  val (iGraph, n) = swg
+
+    Vector.tabulate(n) { i =>
+      val bi = sb(i)
+
+      val neighbors = (0 until n).filter(j => iGraph(j, i) > 0)
+
+      val totalPush = neighbors.map { j =>
+        val bj = sb(j)
+        val beta_ij = 1.0 - math.abs(bj - bi)
+        val influence = iGraph(j, i)
+
+        beta_ij * influence * (bj - bi)
+      }.sum
+
+      bi + (totalPush / neighbors.length)
+    }
   }
 
   def showWeightedGraph(swg: SpecificWeightedGraph):
