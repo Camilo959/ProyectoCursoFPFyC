@@ -1,5 +1,7 @@
 import Comete._
 import common._
+
+import scala.annotation.tailrec
 import scala.collection.parallel.CollectionConverters._
 
 
@@ -81,7 +83,26 @@ package object Opinion {
                swg:SpecificWeightedGraph,
                b0:SpecificBelief ,
                t:Int) : IndexedSeq[SpecificBelief] ={
-  ???
+    // 1. Definimos el motor recursivo interno
+    @tailrec
+    def advanceTime(currentStep: Int, history: Vector[SpecificBelief]): IndexedSeq[SpecificBelief] = {
+
+      // 2. Caso Base (Condicion de parada) (cuando ya termine)
+      if (currentStep == t) {
+        history
+      }
+      // 3. Paso Recursivo (Avanzar el reloj)
+      else {
+        val currentBelief = history.last            // Se extrae el vector de opiniones mas reciendo calculado hasta ese momento
+        val nextBelief = fu(currentBelief, swg)      // Se aplica la regla de actualizacion para calcular las opiniones del siguiente turno
+
+        // La funcion se llama a si misma avanzando el pasoActual y añadiendo un nuevo vector de opiniones a la lista
+        advanceTime(currentStep + 1, history :+ nextBelief)
+      }
+    }
+
+    // 4. Se arranca la simulacion en el turno 0, pasandole el vector de opiniones inicial (b0)
+    advanceTime(0, Vector(b0))
   }
   // Versiones paralelas
 

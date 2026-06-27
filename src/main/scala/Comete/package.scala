@@ -45,7 +45,17 @@ package object Comete {
   def normalizar(m:PolMeasure):PolMeasure= {
     // Recibe una medida de polarizacion, y devuelve la
     // correspondiente medida que la calcula normalizada
-    ???
+    // 1. Se define la distribucion del peor caso (dMax es del tipo Distribution)
+    val dMax = (Vector(0.5, 0.5), Vector(0.0, 1.0))
+
+    // 2. Se calcula la polarizacion maxima con el valor anterior, para la funcion m, que es del tipo Distribution => Double
+    val polMax = m(dMax)
+
+    // 3. Retornamos la función normalizada --> sintaxis de funcion anonima
+    (d: Distribution) => {
+      val polActual = m(d)
+      if (polMax == 0.0) 0.0 else polActual / polMax
+    }
   }
 
 }
