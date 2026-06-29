@@ -35,10 +35,38 @@ package object Opinion {
   // rho(sb,d) es la polarizacion de los agentes
   // de acuerdo a esa medida
 
-  def rho(alpha:Double, beta:Double):AgentsPolMeasure={
-    // rho es la medida de polarizacion de agentes basada
-    // en comete
-  ???
+  def rho(alpha: Double, beta: Double): AgentsPolMeasure = {
+    (b: SpecificBelief, d: DistributionValues) => {
+      val k = d.length
+      val n = b.length.toDouble
+
+      // Instanciamos las funciones del paquete Comete
+      val funcionComete = rhoCMT_Gen(alpha, beta)
+      val funcionNormalizada = normalizar(funcionComete)
+
+      // mapear creencias a sus intervalos
+      val conteos = b.map { belief =>
+          // Si la creencia es exactamente 1.0 (o mayor), va al último intervalo
+          if (belief >= 1.0) k - 1
+          else {
+            // Encontramos el primer índice donde la creencia es menor al límite superior del intervalo
+            val idx = (0 until k - 1).indexWhere(i => belief < (d(i) + d(i + 1)) / 2.0)
+
+            // Si no se encontró (por algún error de precisión), lo forzamos al último intervalo
+            if (idx == -1) k - 1 else idx
+          }
+        }
+        .groupBy(identity) // Agrupamos por índice del intervalo
+        .view.mapValues(lista => lista.size.toDouble / n) // Calculamos la frecuencia
+        .toMap
+
+      // 3. Construimos el vector final de frecuencias asegurando tamaño 'k'
+      // Si un intervalo quedó sin agentes, le asignamos 0.0
+      val frecuencias: Vector[Double] = Vector.tabulate(k)(i => conteos.getOrElse(i, 0.0))
+
+      // 4. Evaluamos pasándole la tupla (Frequency, DistributionValues) requerida por el tipo Distribution
+      funcionNormalizada((frecuencias, d))
+    }
   }
 
   // Tipos para Modelar la evolucion de la opinion en una red
@@ -106,11 +134,37 @@ package object Opinion {
   }
   // Versiones paralelas
 
-  def rhoPar(alpha:Double,
-             beta:Double):AgentsPolMeasure={
-    // rho es la medida de polarizacion de agentes basada
-    // en comete
-  ???
+  // Recuerda asegurarte de tener importado el manejador de colecciones paralelas
+  // si tu versión de Scala lo requiere.
+
+  def rhoPar(alpha: Double, beta: Double): AgentsPolMeasure = {
+    (b: SpecificBelief, d: DistributionValues) => {
+      val k = d.length
+      val n = b.length.toDouble
+
+      // 1. Funciones del paquete Comete (Se invocan de forma secuencial según la regla)
+      val funcionComete = rhoCMT_Gen(alpha, beta)
+      val funcionNormalizada = normalizar(funcionComete)
+
+      // Al usar b.par, Scala divide el vector en varios fragmentos y los procesa al mismo tiempo
+      val conteos = b.par.map { belief =>
+          if (belief >= 1.0) k - 1
+          else {
+            val idx = (0 until k - 1).indexWhere(i => belief < (d(i) + d(i + 1)) / 2.0)
+            if (idx == -1) k - 1 else idx
+          }
+        }
+        .groupBy(identity)
+        .seq // Volvemos a colección secuencial para poder usar .view.mapValues de forma segura
+        .view.mapValues(lista => lista.size.toDouble / n)
+        .toMap
+
+      // 3. Ensamblaje del vector de frecuencias
+      val frecuencias: Vector[Double] = Vector.tabulate(k)(i => conteos.getOrElse(i, 0.0))
+
+      // 4. Retorno final evaluando la tupla (Distribution)
+      funcionNormalizada((frecuencias, d))
+    }
   }
 
   def confBiasUpdatePar(sb:SpecificBelief ,
