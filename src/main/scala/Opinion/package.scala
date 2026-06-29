@@ -80,24 +80,31 @@ package object Opinion {
   type FunctionUpdate=
     (SpecificBelief ,SpecificWeightedGraph)=>SpecificBelief
 
-  def confBiasUpdate(sb:SpecificBelief ,
-                     swg:SpecificWeightedGraph):SpecificBelief ={
-  val (iGraph, n) = swg
+  def confBiasUpdate(sb: SpecificBelief, swg: SpecificWeightedGraph): SpecificBelief = {
+    val (iGraph, n) = swg
 
     Vector.tabulate(n) { i =>
       val bi = sb(i)
 
+      // Identificamos los vecinos del agente i
       val neighbors = (0 until n).filter(j => iGraph(j, i) > 0)
 
-      val totalPush = neighbors.map { j =>
-        val bj = sb(j)
-        val beta_ij = 1.0 - math.abs(bj - bi)
-        val influence = iGraph(j, i)
+      // Corrección de seguridad: si el agente no tiene vecinos, su opinión no cambia
+      if (neighbors.isEmpty) {
+        bi
+      } else {
+        // Si tiene vecinos, procedemos con el cálculo del empuje total
+        val totalPush = neighbors.map { j =>
+          val bj = sb(j)
+          val beta_ij = 1.0 - math.abs(bj - bi)
+          val influence = iGraph(j, i)
 
-        beta_ij * influence * (bj - bi)
-      }.sum
+          beta_ij * influence * (bj - bi)
+        }.sum
 
-      bi + (totalPush / neighbors.length)
+        // Retornamos la creencia actualizada dividiendo por la cantidad de vecinos
+        bi + (totalPush / neighbors.length)
+      }
     }
   }
 
@@ -164,9 +171,33 @@ package object Opinion {
     }
   }
 
-  def confBiasUpdatePar(sb:SpecificBelief ,
-                        swg:SpecificWeightedGraph):SpecificBelief ={
-  ???
+  def confBiasUpdatePar(sb: SpecificBelief, swg: SpecificWeightedGraph): SpecificBelief = {
+    val (iGraph, n) = swg
+
+    // Distribuimos el cálculo de los 'n' agentes en paralelo
+    (0 until n).par.map { i =>
+      val bi = sb(i)
+
+      // Buscamos los vecinos que tienen una influencia mayor a 0 sobre el agente 'i'
+      val neighbors = (0 until n).filter(j => iGraph(j, i) > 0)
+
+      // Validación de seguridad: si no tiene vecinos, su creencia no cambia
+      if (neighbors.isEmpty) {
+        bi
+      } else {
+        // Cálculo del empuje total (sumatoria de influencias)
+        val totalPush = neighbors.map { j =>
+          val bj = sb(j)
+          val beta_ij = 1.0 - math.abs(bj - bi)
+          val influence = iGraph(j, i)
+
+          beta_ij * influence * (bj - bi)
+        }.sum
+
+        // Retornamos la nueva creencia actualizada
+        bi + (totalPush / neighbors.length.toDouble)
+      }
+    }.seq.toVector // Retornamos estrictamente un Vector[Double] (SpecificBelief)
   }
 
 }
