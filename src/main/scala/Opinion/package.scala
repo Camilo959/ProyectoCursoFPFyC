@@ -134,9 +134,6 @@ package object Opinion {
   }
   // Versiones paralelas
 
-  // Recuerda asegurarte de tener importado el manejador de colecciones paralelas
-  // si tu versión de Scala lo requiere.
-
   def rhoPar(alpha: Double, beta: Double): AgentsPolMeasure = {
     (b: SpecificBelief, d: DistributionValues) => {
       val k = d.length
